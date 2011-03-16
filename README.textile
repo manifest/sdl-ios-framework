@@ -1,7 +1,6 @@
 h1. SDL iOS build script
 
-A script creates a pseudo-framework which contains a universal library that can
-be used on a iOS and in the iOS simulator
+A script creates a pseudo-framework which contains a universal library that can be used on a iOS and in the iOS simulator
 
 h2. How to use
 
