@@ -1,4 +1,4 @@
-h1. iOS SDL build script
+h1. SDL iOS build script
 
 A script creates a pseudo-framework which contains a universal library that can
 be used on a iOS and in the iOS simulator
@@ -15,5 +15,5 @@ rake
 
 h2. License
 
-iOS SDL build script is provided under the terms of "the MIT license":http://www.opensource.org/licenses/mit-license.php
+iOS SDL build script is provided under the terms of the "the MIT license":http://www.opensource.org/licenses/mit-license.php
 
