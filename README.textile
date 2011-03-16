@@ -15,5 +15,5 @@ rake
 
 h2. License
 
-iOS SDL build script is provided under the terms of the "the MIT license":http://www.opensource.org/licenses/mit-license.php
+SDL iOS build script is provided under the terms of the "the MIT license":http://www.opensource.org/licenses/mit-license.php
 
