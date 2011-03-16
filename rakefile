@@ -10,9 +10,9 @@
 # ------------------------------------------------------------------------------
 #
 # To configure the script, define:
-#		Conf	configuration, symbol (:release or :debug)
-#		SDK		version number of the iOS SDK, symbol (e.g. :"4.3")
-#		Arch	architecture for the device's library, symbol (e.g. :arm6)
+#   Conf    configuration, symbol (:release or :debug)
+#   SDK     version number of the iOS SDK, symbol (e.g. :"4.3")
+#   Arch    architecture for the device's library, symbol (e.g. :arm6)
 #
 # ------------------------------------------------------------------------------
 
