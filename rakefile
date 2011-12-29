@@ -9,18 +9,26 @@
 #
 # ------------------------------------------------------------------------------
 #
+# Depends on:
+#  hg
+#
+# ------------------------------------------------------------------------------
+#
 # To configure the script, define:
-#   Conf    configuration, symbol (:release or :debug)
-#   SDK     version number of the iOS SDK, symbol (e.g. :"4.3")
-#   Arch    architecture for the device's library, symbol (e.g. :arm6)
+#   Conf      	   configuration (:release or :debug)
+#   Arch      	   architecture for the device's library (e.g. :arm6)
+#   SDK       	   version number of the iOS SDK (e.g. "4.3")
+#   LibVersion     version number of the library wich will be installed
+#                  (e.g. {:SDL = "1.3", :SDL_image = "1.2.10"})
 #
 # ------------------------------------------------------------------------------
 
 # --- Configure ----------------------------------------------------------------
 module Configure
 	Conf = :release
-	SDK = :"4.3"
-	Arch = :arm6
+	Arch = :armv7
+	SDK = "5.0"
+	LibVersion = {:SDL => "1.3", :SDL_image => "1.2.10"}
 end
 
 # --- Constants ----------------------------------------------------------------
@@ -34,7 +42,7 @@ end
 # --- Common -------------------------------------------------------------------
 module Builder
 	def get_sources(from, to)
-		refresh_dir to
+		return if FileTest.exists? to
 		yield from, to
 	end
 
@@ -43,23 +51,29 @@ module Builder
 		sdk, arch = compute_platform(sdk, arch)
 		conf = configuration(conf)
 
-		refresh_dir dest
+		args = []
+		args << %{-sdk "#{sdk}"}
+		args << %{-configuration "#{conf}"}
+		args << %{-target "#{target}"}
+		args << %{-arch "#{arch.to_str}"}
+		args << %{TARGETED_DEVICE_FAMILY="1,2"}
+		args << %{BUILT_PRODUCTS_DIR="build"}
+		args << %{CONFIGURATION_BUILD_DIR="#{dest}"}
+		args << %{CONFIGURATION_TEMP_DIR="#{dest}.build"}
+		cmd = "xcodebuild #{args.join " "}"
+		puts cmd
 
+		refresh_dir dest
 		cd File.dirname project
-		`xcodebuild \
-			-sdk #{sdk} \
-			-configuration "#{conf}" \
-			-target "#{target}" \
-			NATIVE_ARCH=#{arch.to_str} \
-			TARGETED_DEVICE_FAMILY=1 \
-			BUILT_PRODUCTS_DIR="build" \
-			CONFIGURATION_BUILD_DIR=#{dest} \
-			CONFIGURATION_TEMP_DIR="#{dest}.build"`
+		`#{cmd}`
 	end
 
 	def build_framework_library(frameworkLib, deviceLib, simulatorLib)
+		cmd = %{lipo -create #{deviceLib} #{simulatorLib} -o #{frameworkLib}}
+		puts cmd
+
 		refresh_dir File.dirname frameworkLib
-		`lipo -create #{deviceLib} #{simulatorLib} -o #{frameworkLib}`
+		`#{cmd}`
 	end
 
 	def build_framework(name, version, identifier, dest, headers, project, target, conf, sdk, arch)
@@ -144,7 +158,7 @@ module Builder
 
 	def compute_platform(sdk, arch)
 		return [sdk, arch] if arch.class == String
-		[arch == :i386 ? "iphonesimulator" + sdk.to_s : "iphoneos" + sdk.to_s, arch.to_s]
+		[arch == :i386 ? "iphonesimulator" + sdk : "iphoneos" + sdk, arch.to_s]
 	end
 
 	def refresh_dir(path)
@@ -155,12 +169,27 @@ module Builder
 	private :configuration, :compute_platform, :refresh_dir
 end
 
+# --- InstanceBuilder ----------------------------------------------------------
 class InstanceBuilder
 	class Instance
-		extend Builder
+		include Builder
 	end
 
-	def InstanceBuilder.message(text)
+	class << self
+		attr_accessor :instance
+	end
+
+	def self.build(conf, sdk, arch)
+		download
+		unpack
+		build_framework conf, sdk, arch
+	end
+
+	def self.version
+		Configure::LibVersion[self.to_s.to_sym]
+	end
+
+	def self.message(text)
 		tailSize = 75 - text.length;
 		puts "--- #{text} #{'-' * (tailSize < 0 ? 0 : tailSize)}"
 	end
@@ -168,23 +197,31 @@ end
 
 # --- SDL ----------------------------------------------------------------------
 class SDL < InstanceBuilder
-	SourceDir = "#{Global::SourcesDir}/sdl"
-	BuildDir = "#{Global::BuildDir}/sdl"
+	self.instance = Instance.new
 
-	def SDL.download
+	ProjFile = "SDLiPhoneOS.xcodeproj"; 
+	SourcesDir = (FileTest.exists? ProjFile) ? "#{Global::RootDir}/../.." : "#{Global::SourcesDir}/SDL"
+	BuildDir = "#{Global::BuildDir}/sdl"
+	Conf = {:release => "Release", :debug => "Debug"}
+
+	def self.download
 		message "Downloading SDL"
-		Instance.get_sources("http://hg.libsdl.org/SDL", SourceDir) {|from, to|  `hg clone "#{from}" "#{to}"`}
+		self.instance.get_sources("http://hg.libsdl.org/SDL", SourcesDir) {|from, to| `hg clone "#{from}" "#{to}"`}
+	end
+
+	def self.unpack
+		message "Unpacking SDL"
 	end
 	
-	def SDL.build_framework(conf, sdk, arch)
+	def self.build_framework(conf, sdk, arch)
 		message "Building SDL"
-		Instance.build_framework(
+		self.instance.build_framework(
 			"SDL",
-			"1.3",
+			self.version,
 			"org.libsdl",
 			BuildDir, 
-			"#{SourceDir}/include",
-			"#{SourceDir}/Xcode-iPhoneOS/SDL/SDLiPhoneOS.xcodeproj",
+			"#{SourcesDir}/include",
+			"#{SourcesDir}/Xcode-iPhoneOS/SDL/#{ProjFile}",
 			"libSDL",
 			conf,
 			sdk,
@@ -192,19 +229,73 @@ class SDL < InstanceBuilder
 		)
 	end
 
-	def Instance.configuration(conf)
-		case conf
-			when :release
-				"Release"
-			when :debug
-				"Debug"
-		end
+	def instance.configuration(conf)
+		Conf[conf]
+	end
+end
+
+# --- SDL_image ----------------------------------------------------------------
+class SDL_image < InstanceBuilder
+	self.instance = Instance.new
+
+	SourcesDir = "#{Global::SourcesDir}/sdl_image"
+	BuildDir = "#{Global::BuildDir}/sdl_image"
+	Conf = {:release => "Release", :debug => "Debug"}
+ 
+	 def self.download
+    message "Downloading SDL_image"
+    self.instance.get_sources("http://hg.libsdl.org/SDL_image", SourcesDir) {|from, to| `hg clone "#{from}" "#{to}"`}
+  end
+
+	def self.unpack
+		message "Unpacking SDL_image"
+	end
+	
+	def self.build_framework(conf, sdk, arch)
+		message "Building SDL_image"
+		self.instance.build_framework(
+			"SDL_image",
+			self.version,
+			"org.libsdl",
+			BuildDir, 
+			"#{SourcesDir}",
+			"#{SourcesDir}/Xcode_iPhone/SDL_image.xcodeproj",
+			"libSDL_image",
+			conf,
+			sdk,
+			arch
+		)
+	end
+
+	def self.build(conf, sdk, arch)
+		message "Creating a temporary link on the SDL.framework for successful build of the SDL_image"
+		link = "#{SourcesDir}/Xcode_iPhone"
+		rm link if FileTest.exists? link
+		`ln -s "#{SDL::BuildDir}/SDL.framework" "#{link}"`
+		super
+		rm link
+	end
+
+	def instance.configuration(conf)
+		Conf[conf]
 	end
 end
 
 # --- Tasks --------------------------------------------------------------------
-task :default do
-	SDL.download
-	SDL.build_framework Configure::Conf, Configure::SDK, Configure::Arch
+task :default => [:sdl] do
+end
+
+task :sdl do
+	SDL.build Configure::Conf, Configure::SDK, Configure::Arch
+end
+
+task :sdl_image do
+	SDL_image.build Configure::Conf, Configure::SDK, Configure::Arch
+end
+
+task :all do
+	["SDL", "SDL_image"].each do |classname|
+		Object.const_get(classname).build Configure::Conf, Configure::SDK, Configure::Arch
+	end
 end
 
