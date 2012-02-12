@@ -24,6 +24,7 @@ What frameworks are available?
 How to use?
 ---
 `rake` or `rake SDL:build` to download sources and build SDL.framework
+
 `rake build_all` to download and install all available frameworks
 
 More documentation
