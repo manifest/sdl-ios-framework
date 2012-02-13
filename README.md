@@ -4,13 +4,13 @@ A script creates a pseudo-framework which could be used to build iOS application
 
 Depends on
 ---
-__tools__
+__tools__, you could install them with [homebrew][] `brew install hg`
 
 - hg
 - git
 - svn
 
-__rubygems__
+__rubygems__, you could install them with `sudo gem install colorize`
 
 - colorize
 
@@ -33,7 +33,8 @@ More documentation
 
 License
 ---
-SDL iOS build script is provided under the terms of the [the MIT license][licence]
+SDL iOS build script is provided under the terms of the [the Zlib license][license]
 
-[licence]:http://www.opensource.org/licenses/mit-license.php
+[homebrew]:http://mxcl.github.com/homebrew
+[license]:http://www.opensource.org/licenses/Zlib
 
