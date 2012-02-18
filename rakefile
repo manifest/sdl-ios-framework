@@ -219,9 +219,9 @@ class SDL_image < Package
 	Version = "1.2.12"
  
 	def self.download
-    message "downloading SDL_image"
+		message "downloading SDL_image"
 		sh %{hg clone "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
-  end
+	end
 	
 	def self.install(conf, sdk, arch)
 		message "building SDL_image"
@@ -248,7 +248,7 @@ class SDL_mixer < Package
 
 	def self.download
 		message "downloading SDL_mixer"
-    sh %{hg clone "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
+		sh %{hg clone "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
 	end
 	
 	def self.install(conf, sdk, arch)
@@ -283,7 +283,7 @@ class Tremor < Package
 
 	def self.download
 		message "downloading Cocos2d"
-    sh %{git clone "https://github.com/cocos2d/cocos2d-iphone.git" "#{SourcesDir}"}
+		sh %{git clone "https://github.com/cocos2d/cocos2d-iphone.git" "#{SourcesDir}"}
 	end
 	
 	def self.install(conf, sdk, arch)
