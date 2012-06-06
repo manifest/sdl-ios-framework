@@ -28,12 +28,13 @@
 
 require 'rubygems'
 require 'colorize'
+require 'find'
 
 # --- Configure ----------------------------------------------------------------
 module Configure
 	Conf = :release
 	Arch = :armv7
-	SDK = "5.0"
+	SDK = '5.1'
 end
 
 # --- Constants ----------------------------------------------------------------
@@ -82,11 +83,14 @@ module Builder
 	end
 
 	def build_framework(name, version, identifier, dest, headers, project, target, conf, sdk, arch)
-		libFileName = "lib#{name}.a";
-		libFilePath = "#{dest}/universal-#{conf}/#{libFileName}"
-
 		build_library(project, dest, target, conf, sdk, arch);
 		build_library(project, dest, target, conf, sdk, :i386);
+
+		libFileName = nil
+		Find.find(library_bundle_path(dest, conf, sdk, arch)) do |path| 
+			libFileName = File.basename(path) if path =~ /\A.*\.a\z/
+		end
+		libFilePath = "#{dest}/universal-#{conf}/#{libFileName}"
 
 		build_framework_library(
 			libFilePath, 
@@ -335,8 +339,8 @@ Libs.each do |classname|
 		end
 
 		desc "Only build #{classname}.framework"
-		task :build_framework do
-			obj.build_framework Configure::Conf, Configure::SDK, Configure::Arch
+		task :install do
+			obj.install Configure::Conf, Configure::SDK, Configure::Arch
 		end
 
 		desc "Remove all files associated with #{classname}"
