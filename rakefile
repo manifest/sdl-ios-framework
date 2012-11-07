@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Builds a SDL framework for the iOS
-# Copyright (c) 2011-2012 Andrey Nesterov
+# Copyright (c) 2011-2012 Andrei Nesterov
 # See LICENSE for licensing information
 # ------------------------------------------------------------------------------
 #
@@ -34,7 +34,7 @@ require 'find'
 module Configure
 	Conf = :release
 	Arch = :armv7
-	SDK = '5.1'
+	SDK = '6.0'
 end
 
 # --- Constants ----------------------------------------------------------------
@@ -291,6 +291,11 @@ class Tremor < Package
 	end
 	
 	def self.install(conf, sdk, arch)
+		message "switching to v1.x brunch"
+		Dir.chdir(SourcesDir) do
+			sh 'git checkout master'
+		end
+
 		message "building Tremor"
 		self.build_framework(
 			"vorbis",
