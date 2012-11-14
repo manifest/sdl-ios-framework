@@ -51,7 +51,7 @@ def message(text)
 	puts "\n>>> #{text} #{'-' * (tailSize < 0 ? 0 : tailSize)}".green
 end
 
-def refresh_dir(path)
+def refresystem_dir(path)
 	rm_rf path if FileTest.exists? path
 	mkdir_p path
 end
@@ -61,7 +61,7 @@ module Builder
 		dest = library_bundle_path(dest, conf, sdk, arch)
 		sdk, arch = compute_platform(sdk, arch)
 
-		refresh_dir dest
+		refresystem_dir dest
 		cd File.dirname project
 
 		args = []
@@ -74,12 +74,12 @@ module Builder
 		args << %{BUILT_PRODUCTS_DIR="build"}
 		args << %{CONFIGURATION_BUILD_DIR="#{dest}"}
 		args << %{CONFIGURATION_TEMP_DIR="#{dest}.build"}
-		sh %{xcodebuild #{args.join " "}}
+		system %{xcodebuild #{args.join " "}}
 	end
 
 	def build_framework_library(frameworkLib, deviceLib, simulatorLib)
-		refresh_dir(File.dirname(frameworkLib))
-		sh %{lipo -create #{deviceLib} #{simulatorLib} -o #{frameworkLib}}
+		refresystem_dir(File.dirname(frameworkLib))
+		system %{lipo -create #{deviceLib} #{simulatorLib} -o #{frameworkLib}}
 	end
 
 	def build_framework(name, version, identifier, dest, headers, project, target, conf, sdk, arch)
@@ -105,7 +105,7 @@ module Builder
 		frameworkBundle = framework_bundle_path(dest, name)
 
 		# creating framework's directories	
-		refresh_dir frameworkBundle
+		refresystem_dir frameworkBundle
 		mkdir "#{frameworkBundle}/Versions"
 		mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}"
 		mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Resources"
@@ -113,11 +113,11 @@ module Builder
 		mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Documentation"
 
 		# creating framework's symlinks
-		sh %{ln -s "#{frameworkVersion}" "#{frameworkBundle}/Versions/Current"}
-		sh %{ln -s "Versions/Current/Headers" "#{frameworkBundle}/Headers"}
-		sh %{ln -s "Versions/Current/Resources" "#{frameworkBundle}/Resources"}
-		sh %{ln -s "Versions/Current/Documentation" "#{frameworkBundle}/Documentation"}
-		sh %{ln -s "Versions/Current/#{File.basename lib}" "#{frameworkBundle}/#{name}"}
+		system %{ln -s "#{frameworkVersion}" "#{frameworkBundle}/Versions/Current"}
+		system %{ln -s "Versions/Current/Headers" "#{frameworkBundle}/Headers"}
+		system %{ln -s "Versions/Current/Resources" "#{frameworkBundle}/Resources"}
+		system %{ln -s "Versions/Current/Documentation" "#{frameworkBundle}/Documentation"}
+		system %{ln -s "Versions/Current/#{File.basename lib}" "#{frameworkBundle}/#{name}"}
 
 		# copying lib
 		cp lib, "#{frameworkBundle}/Versions/#{frameworkVersion}"
@@ -134,7 +134,7 @@ module Builder
 <plist version="1.0">'
 			f.puts "<dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>English</string>
+	<string>Englisystem</string>
 	<key>CFBundleExecutable</key>
 	<string>#{name}</string>
 	<key>CFBundleIdentifier</key>
@@ -196,7 +196,7 @@ class SDL < Package
 
 	def self.download
 		message "downloading SDL"
-		sh %{hg clone "http://hg.libsdl.org/SDL" "#{SourcesDir}"}
+		system %{hg clone "http://hg.libsdl.org/SDL" "#{SourcesDir}"}
 	end
 	
 	def self.install(conf, sdk, arch)
@@ -224,7 +224,7 @@ class SDL_image < Package
  
 	def self.download
 		message "downloading SDL_image"
-		sh %{hg clone "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
+		system %{hg clone "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
 	end
 	
 	def self.install(conf, sdk, arch)
@@ -252,14 +252,14 @@ class SDL_mixer < Package
 
 	def self.download
 		message "downloading SDL_mixer"
-		sh %{hg clone "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
+		system %{hg clone "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
 	end
 	
 	def self.install(conf, sdk, arch)
 		message "creating links on vorbis headers for successful SDL_mixer building"
-		refresh_dir(headersDir = "#{Global::SourcesDir}/libtremor")
-		sh %{ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/ogg"}
-		sh %{ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/tremor"}
+		refresystem_dir(headersDir = "#{Global::SourcesDir}/libtremor")
+		system %{ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/ogg"}
+		system %{ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/tremor"}
 
 		message "building SDL_mixer"
 		self.build_framework(
@@ -287,13 +287,13 @@ class Tremor < Package
 
 	def self.download
 		message "downloading Cocos2d"
-		sh %{git clone "https://github.com/cocos2d/cocos2d-iphone.git" "#{SourcesDir}"}
+		system %{git clone "https://github.com/cocos2d/cocos2d-iphone.git" "#{SourcesDir}"}
 	end
 	
 	def self.install(conf, sdk, arch)
 		message "switching to v1.x brunch"
 		Dir.chdir(SourcesDir) do
-			sh 'git checkout master'
+			system 'git checkout master'
 		end
 
 		message "building Tremor"
