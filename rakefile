@@ -52,8 +52,8 @@ def message(text)
 end
 
 def refresystem_dir(path)
-	rm_rf path if FileTest.exists? path
-	mkdir_p path
+	system %{ rm -rf #{path} } if FileTest.exists? path
+	system %{ mkdir -p#{path} }
 end
 
 module Builder
@@ -275,7 +275,7 @@ class SDL_mixer < Package
 			arch
 		)
 
-		rm_rf headersDir
+		system %{ rm -rf #{headersDir} }
 	end
 end
 
