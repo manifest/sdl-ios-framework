@@ -53,16 +53,13 @@ end
 
 def refresystem_dir(path)
 	system %{ rm -rf #{path} } if FileTest.exists? path
-	system %{ mkdir -p#{path} }
+	system %{ mkdir -p #{path} }
 end
 
 module Builder
 	def build_library(project, dest, target, conf, sdk, arch)
 		dest = library_bundle_path(dest, conf, sdk, arch)
 		sdk, arch = compute_platform(sdk, arch)
-
-		refresystem_dir dest
-		cd File.dirname project
 
 		args = []
 		args << %{-sdk "#{sdk}"}
@@ -74,7 +71,11 @@ module Builder
 		args << %{BUILT_PRODUCTS_DIR="build"}
 		args << %{CONFIGURATION_BUILD_DIR="#{dest}"}
 		args << %{CONFIGURATION_TEMP_DIR="#{dest}.build"}
-		system %{xcodebuild #{args.join " "}}
+
+		refresystem_dir dest
+		Dir.chdir File.dirname(project) do
+			system %{xcodebuild #{args.join " "}}
+		end
 	end
 
 	def build_framework_library(frameworkLib, deviceLib, simulatorLib)
@@ -106,25 +107,25 @@ module Builder
 
 		# creating framework's directories	
 		refresystem_dir frameworkBundle
-		mkdir "#{frameworkBundle}/Versions"
-		mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}"
-		mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Resources"
-		mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Headers"
-		mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Documentation"
+		system %{ mkdir "#{frameworkBundle}/Versions" }
+		system %{ mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}" }
+		system %{ mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Resources" }
+		system %{ mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Headers" }
+		system %{ mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Documentation" }
 
 		# creating framework's symlinks
-		system %{ln -s "#{frameworkVersion}" "#{frameworkBundle}/Versions/Current"}
-		system %{ln -s "Versions/Current/Headers" "#{frameworkBundle}/Headers"}
-		system %{ln -s "Versions/Current/Resources" "#{frameworkBundle}/Resources"}
-		system %{ln -s "Versions/Current/Documentation" "#{frameworkBundle}/Documentation"}
-		system %{ln -s "Versions/Current/#{File.basename lib}" "#{frameworkBundle}/#{name}"}
+		system %{ ln -s "#{frameworkVersion}" "#{frameworkBundle}/Versions/Current" }
+		system %{ ln -s "Versions/Current/Headers" "#{frameworkBundle}/Headers" }
+		system %{ ln -s "Versions/Current/Resources" "#{frameworkBundle}/Resources" }
+		system %{ ln -s "Versions/Current/Documentation" "#{frameworkBundle}/Documentation" }
+		system %{ ln -s "Versions/Current/#{File.basename lib}" "#{frameworkBundle}/#{name}" }
 
 		# copying lib
-		cp lib, "#{frameworkBundle}/Versions/#{frameworkVersion}"
+		system %{ cp "#{lib}" "#{frameworkBundle}/Versions/#{frameworkVersion}" }
 
 		# copying includes
 		FileList["#{headers}/*.h"].each do |source|
-			cp source, "#{frameworkBundle}/Headers"
+			system %{ cp "#{source}" "#{frameworkBundle}/Headers" }
 		end
 
 		# creating plist
@@ -258,8 +259,8 @@ class SDL_mixer < Package
 	def self.install(conf, sdk, arch)
 		message "creating links on vorbis headers for successful SDL_mixer building"
 		refresystem_dir(headersDir = "#{Global::SourcesDir}/libtremor")
-		system %{ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/ogg"}
-		system %{ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/tremor"}
+		system %{ ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/ogg" }
+		system %{ ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/tremor" }
 
 		message "building SDL_mixer"
 		self.build_framework(
