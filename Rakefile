@@ -12,9 +12,9 @@
 # Depends on tools:
 #  hg
 #  git
-#  svn
 #
 # Depends on rubygems:
+#  rake
 #  colorize
 #
 # ------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ require 'find'
 module Configure
 	Conf = :release
 	Arch = :armv7
-	SDK = '6.0'
+	SDK = `xcrun --sdk iphoneos --show-sdk-version`.chop
 end
 
 # --- Constants ----------------------------------------------------------------
@@ -51,7 +51,7 @@ def message(text)
 	puts "\n>>> #{text} #{'-' * (tailSize < 0 ? 0 : tailSize)}".green
 end
 
-def refresystem_dir(path)
+def refresh_dir(path)
 	system %{ rm -rf #{path} } if FileTest.exists? path
 	system %{ mkdir -p #{path} }
 end
@@ -72,14 +72,14 @@ module Builder
 		args << %{CONFIGURATION_BUILD_DIR="#{dest}"}
 		args << %{CONFIGURATION_TEMP_DIR="#{dest}.build"}
 
-		refresystem_dir dest
+		refresh_dir dest
 		Dir.chdir File.dirname(project) do
 			system %{xcodebuild #{args.join " "}}
 		end
 	end
 
 	def build_framework_library(frameworkLib, deviceLib, simulatorLib)
-		refresystem_dir(File.dirname(frameworkLib))
+		refresh_dir(File.dirname(frameworkLib))
 		system %{lipo -create #{deviceLib} #{simulatorLib} -o #{frameworkLib}}
 	end
 
@@ -106,7 +106,7 @@ module Builder
 		frameworkBundle = framework_bundle_path(dest, name)
 
 		# creating framework's directories	
-		refresystem_dir frameworkBundle
+		refresh_dir frameworkBundle
 		system %{ mkdir "#{frameworkBundle}/Versions" }
 		system %{ mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}" }
 		system %{ mkdir "#{frameworkBundle}/Versions/#{frameworkVersion}/Resources" }
@@ -177,7 +177,7 @@ class Package
 	def self.build(conf, sdk, arch)
 		download
 		unpack
-		install(config(conf), sdk, arch)
+		build_phase(config(conf), sdk, arch)
 	end
 
 	def self.unpack
@@ -191,16 +191,16 @@ end
 # --- SDL ----------------------------------------------------------------------
 class SDL < Package
 	ProjFile = "SDL.xcodeproj"
-	SourcesDir = (FileTest.exists? ProjFile) ? "#{Global::RootDir}/../.." : "#{Global::SourcesDir}/SDL"
+	SourcesDir = "#{Global::SourcesDir}/SDL"
 	BuildDir = "#{Global::BuildDir}/sdl"
-	Version = "2.0"
+	Version = "2.0.1"
 
 	def self.download
 		message "downloading SDL"
-		system %{hg clone "http://hg.libsdl.org/SDL" "#{SourcesDir}"}
+		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL" "#{SourcesDir}"}
 	end
 	
-	def self.install(conf, sdk, arch)
+	def self.build_phase(conf, sdk, arch)
 		message "building SDL"
 		self.build_framework(
 			"SDL",
@@ -221,14 +221,14 @@ end
 class SDL_image < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_image"
 	BuildDir = "#{Global::BuildDir}/sdl_image"
-	Version = "1.2.12"
+	Version = "2.0.0"
  
 	def self.download
 		message "downloading SDL_image"
-		system %{hg clone "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
+		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
 	end
 	
-	def self.install(conf, sdk, arch)
+	def self.build_phase(conf, sdk, arch)
 		message "building SDL_image"
 		self.build_framework(
 			"SDL_image",
@@ -249,18 +249,16 @@ end
 class SDL_mixer < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_mixer"
 	BuildDir = "#{Global::BuildDir}/sdl_mixer"
-	Version = "1.2.12"
+	Version = "2.0.0"
 
 	def self.download
 		message "downloading SDL_mixer"
-		system %{hg clone "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
+		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
 	end
 	
-	def self.install(conf, sdk, arch)
-		message "creating links on vorbis headers for successful SDL_mixer building"
-		refresystem_dir(headersDir = "#{Global::SourcesDir}/libtremor")
-		system %{ ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/ogg" }
-		system %{ ln -s "#{Tremor::BuildDir}/vorbis.framework/Headers" "#{headersDir}/tremor" }
+	def self.build_phase(conf, sdk, arch)
+		message "patching SDL_mixer"
+		system %{sed -e 's/#include <endian.h>/#include <machine\\/endian.h>/' -i.back "#{SourcesDir}/external/libvorbisidec-1.2.1/misc.h"}
 
 		message "building SDL_mixer"
 		self.build_framework(
@@ -275,8 +273,6 @@ class SDL_mixer < Package
 			sdk,
 			arch
 		)
-
-		system %{ rm -rf #{headersDir} }
 	end
 end
 
@@ -291,10 +287,10 @@ class Tremor < Package
 		system %{git clone "https://github.com/cocos2d/cocos2d-iphone.git" "#{SourcesDir}"}
 	end
 	
-	def self.install(conf, sdk, arch)
+	def self.build_phase(conf, sdk, arch)
 		message "switching to v1.x brunch"
 		Dir.chdir(SourcesDir) do
-			system 'git checkout master'
+			system 'git checkout release-1.1'
 		end
 
 		message "building Tremor"
@@ -316,40 +312,41 @@ end
 # --- Tasks --------------------------------------------------------------------
 require 'rake/clean'
 
-Libs = [:SDL, :SDL_image, :Tremor, :SDL_mixer]
+SDLL = [:SDL, :SDL_image, :SDL_mixer]
+AllL = SDLL + [:Tremor]
 
-desc "Download sources and build SDL.framework"
+desc "Download and build the SDL framework"
 task :default => ["SDL:build"] do
 end
 
-desc "Download sources and build all targets [#{Libs.join ", "}]"
+desc "Download and build all SDL specific frameworks: [#{SDLL.join ", "}]"
 task :build_all do
-	Libs.each do |classname|
+	SDLL.each do |classname|
 		Object.const_get(classname).build Configure::Conf, Configure::SDK, Configure::Arch
 	end
 end
 
-Libs.each do |classname|
+AllL.each do |classname|
 	namespace classname do
 		obj = Object.const_get(classname)
 
-		desc "Download sources and build #{classname}.framework"
+		desc "#{classname}: download and build framework"
 		task :build do
 			obj.build Configure::Conf, Configure::SDK, Configure::Arch
 		end
 
-		desc "Only download #{classname} sources"
+		desc "#{classname}: download"
 		task :download do
 			obj.download
 			obj.unpack
 		end
 
-		desc "Only build #{classname}.framework"
-		task :install do
-			obj.install Configure::Conf, Configure::SDK, Configure::Arch
+		desc "#{classname}: build framework"
+		task :build_phase do
+			obj.build_phase Configure::Conf, Configure::SDK, Configure::Arch
 		end
 
-		desc "Remove all files associated with #{classname}"
+		desc "#{classname}: remove any generated file"
 		task :clobber do
 			CLOBBER = Rake::FileList.new
 			CLOBBER.include obj::SourcesDir, obj::BuildDir
