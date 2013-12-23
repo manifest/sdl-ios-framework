@@ -19,7 +19,7 @@ What frameworks are available?
 - SDL
 - SDL_image
 - SDL_mixer
-- Tremor _(SDL\_mixer contains its own copy now)_
+- Tremor _(SDL_mixer contains its own copy now)_
 
 How to use?
 ---
@@ -34,7 +34,7 @@ More information
 
 License
 ---
-SDL iOS build script is provided under the terms of the [the Zlib license][license]
+SDL iOS build script is provided under the terms of the [Zlib][license] license
 
 [homebrew]:http://mxcl.github.com/homebrew
 [license]:http://www.opensource.org/licenses/Zlib
