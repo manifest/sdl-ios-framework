@@ -19,7 +19,7 @@ What frameworks are available?
 - SDL
 - SDL_image
 - SDL_mixer
-- Tremor _(SDL_mixer contains its own copy now)_
+- Tremor *(SDL_mixer contains its own copy now)*
 
 How to use?
 ---
