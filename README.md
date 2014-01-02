@@ -1,6 +1,6 @@
 SDL iOS build script
 ===
-The script creates a set of frameworks that can be easily used to develop SDL applications for the iOS platform.
+The script creates a set of pseudo-frameworks that can be easily used to develop a SDL applications for the iOS platform.
 
 Depends on
 ---

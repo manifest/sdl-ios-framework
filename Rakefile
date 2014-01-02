@@ -1,11 +1,11 @@
 # ------------------------------------------------------------------------------
 # Builds a SDL framework for the iOS
-# Copyright (c) 2011-2012 Andrei Nesterov
+# Copyright (c) 2011-2014 Andrei Nesterov
 # See LICENSE for licensing information
 # ------------------------------------------------------------------------------
 #
-# Creates a pseudo-framework which could be used to build iOS applications for 
-# both simulator and device
+# The script creates a set of pseudo-frameworks that can be easily used to develop
+# a SDL applications for the iOS platform.
 #
 # ------------------------------------------------------------------------------
 #
