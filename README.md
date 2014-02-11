@@ -16,16 +16,16 @@ __rubygems__, you could install them with bundler `gem install bundler && bundle
 
 What frameworks are available?
 ---
-- SDL
-- SDL_image
-- SDL_mixer
-- SDL_ttf
-- Tremor *(SDL_mixer contains its own copy now)*
+- SDL2
+- SDL2_image
+- SDL2_mixer
+- SDL2_ttf
+- Tremor *(SDL2_mixer contains its own copy now)*
 
 How to use?
 ---
 
-`rake` or `rake SDL:build` to download sources and build SDL.framework
+`rake` or `rake SDL2:build` to download sources and build SDL2.framework
 
 `rake build_all` to download and build all sdl specific frameworks
 

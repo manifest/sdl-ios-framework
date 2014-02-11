@@ -189,7 +189,7 @@ class Package
 end
 
 # --- SDL ----------------------------------------------------------------------
-class SDL < Package
+class SDL2 < Package
 	ProjFile = "SDL.xcodeproj"
 	SourcesDir = "#{Global::SourcesDir}/SDL"
 	BuildDir = "#{Global::BuildDir}/sdl"
@@ -218,7 +218,7 @@ class SDL < Package
 end
 
 # --- SDL_image ----------------------------------------------------------------
-class SDL_image < Package
+class SDL2_image < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_image"
 	BuildDir = "#{Global::BuildDir}/sdl_image"
 	Version = "2.0.0"
@@ -246,7 +246,7 @@ class SDL_image < Package
 end
 
 # --- SDL_ttf ----------------------------------------------------------------
-class SDL_ttf < Package
+class SDL2_ttf < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_ttf"
 	BuildDir = "#{Global::BuildDir}/sdl_ttf"
 	Version = "2.0.12"
@@ -274,7 +274,7 @@ class SDL_ttf < Package
 end
 
 # --- SDL_mixer ----------------------------------------------------------------
-class SDL_mixer < Package
+class SDL2_mixer < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_mixer"
 	BuildDir = "#{Global::BuildDir}/sdl_mixer"
 	Version = "2.0.0"
@@ -340,7 +340,7 @@ end
 # --- Tasks --------------------------------------------------------------------
 require 'rake/clean'
 
-SDLL = [:SDL, :SDL_image, :SDL_mixer, :SDL_ttf]
+SDLL = [:SDL2, :SDL2_image, :SDL2_mixer, :SDL2_ttf]
 AllL = SDLL + [:Tremor]
 
 desc "Download and build the SDL framework"
