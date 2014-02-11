@@ -203,7 +203,7 @@ class SDL < Package
 	def self.build_phase(conf, sdk, arch)
 		message "building SDL"
 		self.build_framework(
-			"SDL",
+			"SDL2",
 			Version,
 			"org.libsdl",
 			BuildDir, 
@@ -231,7 +231,7 @@ class SDL_image < Package
 	def self.build_phase(conf, sdk, arch)
 		message "building SDL_image"
 		self.build_framework(
-			"SDL_image",
+			"SDL2_image",
 			Version,
 			"org.libsdl",
 			BuildDir, 
@@ -259,7 +259,7 @@ class SDL_ttf < Package
 	def self.build_phase(conf, sdk, arch)
 		message "building SDL_ttf"
 		self.build_framework(
-			"SDL_ttf",
+			"SDL2_ttf",
 			Version,
 			"org.libsdl",
 			BuildDir,
@@ -290,7 +290,7 @@ class SDL_mixer < Package
 
 		message "building SDL_mixer"
 		self.build_framework(
-			"SDL_mixer",
+			"SDL2_mixer",
 			Version,
 			"org.libsdl",
 			BuildDir, 
