@@ -245,6 +245,34 @@ class SDL_image < Package
 	end
 end
 
+# --- SDL_ttf ----------------------------------------------------------------
+class SDL_ttf < Package
+	SourcesDir = "#{Global::SourcesDir}/sdl_ttf"
+	BuildDir = "#{Global::BuildDir}/sdl_ttf"
+	Version = "2.0.12"
+
+	def self.download
+		message "downloading SDL_ttf"
+		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_ttf" "#{SourcesDir}"}
+	end
+
+	def self.build_phase(conf, sdk, arch)
+		message "building SDL_ttf"
+		self.build_framework(
+			"SDL_ttf",
+			Version,
+			"org.libsdl",
+			BuildDir,
+			"#{SourcesDir}",
+			"#{SourcesDir}/Xcode-iOS/SDL_ttf.xcodeproj",
+			"Static Library",
+			conf,
+			sdk,
+			arch
+		)
+	end
+end
+
 # --- SDL_mixer ----------------------------------------------------------------
 class SDL_mixer < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_mixer"
@@ -312,7 +340,7 @@ end
 # --- Tasks --------------------------------------------------------------------
 require 'rake/clean'
 
-SDLL = [:SDL, :SDL_image, :SDL_mixer]
+SDLL = [:SDL, :SDL_image, :SDL_mixer, :SDL_ttf]
 AllL = SDLL + [:Tremor]
 
 desc "Download and build the SDL framework"
