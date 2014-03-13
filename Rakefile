@@ -193,7 +193,7 @@ class SDL2 < Package
 	ProjFile = "SDL.xcodeproj"
 	SourcesDir = "#{Global::SourcesDir}/SDL"
 	BuildDir = "#{Global::BuildDir}/sdl"
-	Version = "2.0.1"
+	Version = "2.0.2"
 
 	def self.download
 		message "downloading SDL"
