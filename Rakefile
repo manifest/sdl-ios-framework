@@ -33,7 +33,7 @@ require 'find'
 # --- Configure ----------------------------------------------------------------
 module Configure
 	Conf = :release
-	Arch = :armv7
+	Arch = [:armv7, :armv7s, :arm64, :i386, :x86_64]
 	SDK = `xcrun --sdk iphoneos --show-sdk-version`.chop
 end
 
@@ -72,32 +72,43 @@ module Builder
 		args << %{CONFIGURATION_BUILD_DIR="#{dest}"}
 		args << %{CONFIGURATION_TEMP_DIR="#{dest}.build"}
 
+        target = '5.0'
+        if arch == 'arm64'
+            target = '7.0'
+        elsif arch == 'x86_64'
+            target = '6.0'
+            args << %{VALID_ARCHS="x86_64"}
+        end
+		args << %{IPHONEOS_DEPLOYMENT_TARGET="#{target}"}
+
 		refresh_dir dest
 		Dir.chdir File.dirname(project) do
 			system %{xcodebuild #{args.join " "}}
 		end
 	end
 
-	def build_framework_library(frameworkLib, deviceLib, simulatorLib)
-		refresh_dir(File.dirname(frameworkLib))
-		system %{lipo -create #{deviceLib} #{simulatorLib} -o #{frameworkLib}}
+	def build_framework_library(frameworkLib, name, dest, conf, sdk, arch)
+        libs = ''
+        for a in arch
+             deviceLib = "#{library_bundle_path(dest, conf, sdk, a)}/#{name}"
+             libs << deviceLib << ' ';
+        end
+    	refresh_dir(File.dirname(frameworkLib))
+		system %{lipo -create #{libs} -o #{frameworkLib}}
 	end
 
 	def build_framework(name, version, identifier, dest, headers, project, target, conf, sdk, arch)
-		build_library(project, dest, target, conf, sdk, arch);
-		build_library(project, dest, target, conf, sdk, :i386);
+        for a in arch
+    		build_library(project, dest, target, conf, sdk, a)
+        end
 
 		libFileName = nil
-		Find.find(library_bundle_path(dest, conf, sdk, arch)) do |path| 
+		Find.find(library_bundle_path(dest, conf, sdk, arch.at(0))) do |path| 
 			libFileName = File.basename(path) if path =~ /\A.*\.a\z/
 		end
 		libFilePath = "#{dest}/universal-#{conf}/#{libFileName}"
 
-		build_framework_library(
-			libFilePath, 
-			"#{library_bundle_path(dest, conf, sdk, arch)}/#{libFileName}",
-			"#{library_bundle_path(dest, conf, sdk, :i386)}/#{libFileName}"
-		)
+		build_framework_library(libFilePath, libFileName, dest, conf, sdk, arch)
 		create_framework(name, version, identifier, dest, headers, libFilePath)
 	end
 
@@ -164,7 +175,7 @@ module Builder
 
 	def compute_platform(sdk, arch)
 		return [sdk, arch] if arch.class == String
-		[arch == :i386 ? "iphonesimulator" + sdk : "iphoneos" + sdk, arch.to_s]
+		[arch == :i386 || arch == :x86_64 ? "iphonesimulator" + sdk : "iphoneos" + sdk, arch.to_s]
 	end
 
 	private :library_bundle_path, :framework_bundle_path, :compute_platform 
@@ -193,11 +204,11 @@ class SDL2 < Package
 	ProjFile = "SDL.xcodeproj"
 	SourcesDir = "#{Global::SourcesDir}/SDL"
 	BuildDir = "#{Global::BuildDir}/sdl"
-	Version = "2.0.2"
+	Version = "2.0.4hg"
 
 	def self.download
 		message "downloading SDL"
-		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL" "#{SourcesDir}"}
+		system %{hg clone "http://hg.libsdl.org/SDL" "#{SourcesDir}"}
 	end
 	
 	def self.build_phase(conf, sdk, arch)
@@ -221,11 +232,11 @@ end
 class SDL2_image < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_image"
 	BuildDir = "#{Global::BuildDir}/sdl_image"
-	Version = "2.0.0"
+	Version = "2.0.0hg"
  
 	def self.download
 		message "downloading SDL_image"
-		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
+		system %{hg clone "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
 	end
 	
 	def self.build_phase(conf, sdk, arch)
@@ -249,11 +260,11 @@ end
 class SDL2_ttf < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_ttf"
 	BuildDir = "#{Global::BuildDir}/sdl_ttf"
-	Version = "2.0.12"
+	Version = "2.0.12hg"
 
 	def self.download
 		message "downloading SDL_ttf"
-		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_ttf" "#{SourcesDir}"}
+		system %{hg clone "http://hg.libsdl.org/SDL_ttf" "#{SourcesDir}"}
 	end
 
 	def self.build_phase(conf, sdk, arch)
@@ -277,11 +288,11 @@ end
 class SDL2_mixer < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_mixer"
 	BuildDir = "#{Global::BuildDir}/sdl_mixer"
-	Version = "2.0.0"
+	Version = "2.0.0hg"
 
 	def self.download
 		message "downloading SDL_mixer"
-		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
+		system %{hg clone "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
 	end
 	
 	def self.build_phase(conf, sdk, arch)
@@ -304,82 +315,20 @@ class SDL2_mixer < Package
 	end
 end
 
-# --- Tremor -------------------------------------------------------------------
-class Tremor < Package
-	SourcesDir = "#{Global::SourcesDir}/cocos2d"
-	BuildDir = "#{Global::BuildDir}/tremor"
-	Version = "1.3.2"
-
-	def self.download
-		message "downloading Cocos2d"
-		system %{git clone "https://github.com/cocos2d/cocos2d-iphone.git" "#{SourcesDir}"}
-	end
-	
-	def self.build_phase(conf, sdk, arch)
-		message "switching to v1.x brunch"
-		Dir.chdir(SourcesDir) do
-			system 'git checkout release-1.1'
-		end
-
-		message "building Tremor"
-		self.build_framework(
-			"vorbis",
-			Version,
-			"org.xiph",
-			BuildDir, 
-			"#{SourcesDir}/external/Tremor",
-			"#{SourcesDir}/cocos2d-ios.xcodeproj",
-			"vorbis",
-			conf,
-			sdk,
-			arch
-		)
-	end
-end
-
 # --- Tasks --------------------------------------------------------------------
 require 'rake/clean'
 
 SDLL = [:SDL2, :SDL2_image, :SDL2_mixer, :SDL2_ttf]
-AllL = SDLL + [:Tremor]
 
 desc "Download and build the SDL framework"
-task :default => ["SDL:build"] do
+task :default do
+    Object.const_get(:SDL2).build Configure::Conf, Configure::SDK, Configure::Arch
 end
 
 desc "Download and build all SDL specific frameworks: [#{SDLL.join ", "}]"
 task :build_all do
 	SDLL.each do |classname|
 		Object.const_get(classname).build Configure::Conf, Configure::SDK, Configure::Arch
-	end
-end
-
-AllL.each do |classname|
-	namespace classname do
-		obj = Object.const_get(classname)
-
-		desc "#{classname}: download and build framework"
-		task :build do
-			obj.build Configure::Conf, Configure::SDK, Configure::Arch
-		end
-
-		desc "#{classname}: download"
-		task :download do
-			obj.download
-			obj.unpack
-		end
-
-		desc "#{classname}: build framework"
-		task :build_phase do
-			obj.build_phase Configure::Conf, Configure::SDK, Configure::Arch
-		end
-
-		desc "#{classname}: remove any generated file"
-		task :clobber do
-			CLOBBER = Rake::FileList.new
-			CLOBBER.include obj::SourcesDir, obj::BuildDir
-			Rake::Task[:clobber].execute
-		end
 	end
 end
 
