@@ -18,9 +18,8 @@ What frameworks are available?
 ---
 - SDL2
 - SDL2_image
-- SDL2_mixer
+- SDL2_mixer (with ogg vorbis support through the embedded Tremor)
 - SDL2_ttf
-- Tremor *(SDL2_mixer contains its own copy now)*
 
 How to use?
 ---
