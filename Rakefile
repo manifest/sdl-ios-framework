@@ -72,6 +72,7 @@ module Builder
 		args << %{CONFIGURATION_BUILD_DIR="#{dest}"}
 		args << %{CONFIGURATION_TEMP_DIR="#{dest}.build"}
 
+# this logic is suggested here: http://blog.diogot.com/blog/2013/09/18/static-libs-with-support-to-ios-5-and-arm64/
         target = '5.0'
         if arch == 'arm64'
             target = '7.0'
