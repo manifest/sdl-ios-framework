@@ -4,8 +4,7 @@
 # See LICENSE for licensing information
 # ------------------------------------------------------------------------------
 #
-# The script creates a set of pseudo-frameworks that can be easily used to develop
-# a SDL applications for the iOS platform.
+# The script creates iOS pseudo-frameworks for SDL2 and related libraries
 #
 # ------------------------------------------------------------------------------
 #
@@ -20,9 +19,9 @@
 # ------------------------------------------------------------------------------
 #
 # To configure the script, define:
-#   Conf      	   configuration (:release or :debug)
-#   Arch      	   architecture for the device's library (e.g. :armv6)
-#   SDK       	   version number of the iOS SDK (e.g. "4.3")
+#   Archs       a list of architectures planned to support (e.g. [:armv6,:i386])
+#   Conf        configuration (:release or :debug)
+#   SDK         a version number of installed iOS SDK (e.g. "4.3")
 #
 # ------------------------------------------------------------------------------
 
@@ -32,8 +31,8 @@ require 'find'
 
 # --- Configure ----------------------------------------------------------------
 module Configure
+	Archs = [:armv7, :armv7s, :arm64, :i386, :x86_64]
 	Conf = :release
-	Arch = :armv7
 	SDK = `xcrun --sdk iphoneos --show-sdk-version`.chop
 end
 
@@ -59,18 +58,28 @@ end
 module Builder
 	def build_library(project, dest, target, conf, sdk, arch)
 		dest = library_bundle_path(dest, conf, sdk, arch)
-		sdk, arch = compute_platform(sdk, arch)
+		psdk, parch = compute_platform(sdk, arch)
 
 		args = []
-		args << %{-sdk "#{sdk}"}
+		args << %{-sdk "#{psdk}"}
 		args << %{-configuration "#{conf}"}
 		args << %{-target "#{target}"}
-		args << %{-arch "#{arch.to_str}"}
+		args << %{-arch "#{parch}"}
 		args << %{-project "#{project}"}
 		args << %{TARGETED_DEVICE_FAMILY="1,2"}
 		args << %{BUILT_PRODUCTS_DIR="build"}
 		args << %{CONFIGURATION_BUILD_DIR="#{dest}"}
 		args << %{CONFIGURATION_TEMP_DIR="#{dest}.build"}
+
+		case arch
+			when :arm64
+				args << %{IPHONEOS_DEPLOYMENT_TARGET=7.0}
+			when :x86_64
+				args << %{VALID_ARCHS="x86_64"}
+				args << %{IPHONEOS_DEPLOYMENT_TARGET=6.0}
+			else
+				args << %{IPHONEOS_DEPLOYMENT_TARGET=5.0}
+		end
 
 		refresh_dir dest
 		Dir.chdir File.dirname(project) do
@@ -78,27 +87,25 @@ module Builder
 		end
 	end
 
-	def build_framework_library(frameworkLib, deviceLib, simulatorLib)
-		refresh_dir(File.dirname(frameworkLib))
-		system %{lipo -create #{deviceLib} #{simulatorLib} -o #{frameworkLib}}
+	def build_framework_library(outputPath, inputPaths)
+		refresh_dir(File.dirname(outputPath))
+		system %{lipo -create #{inputPaths.join(" ")} -o #{outputPath}}
 	end
 
-	def build_framework(name, version, identifier, dest, headers, project, target, conf, sdk, arch)
-		build_library(project, dest, target, conf, sdk, arch);
-		build_library(project, dest, target, conf, sdk, :i386);
+	def build_framework(name, version, identifier, dest, headers, project, target, conf, sdk, archs)
+		ulibDir = "#{dest}/universal-#{conf}"
+		libPaths = []
+		archs.each do |arch|
+			build_library(project, dest, target, conf, sdk, arch)
 
-		libFileName = nil
-		Find.find(library_bundle_path(dest, conf, sdk, arch)) do |path| 
-			libFileName = File.basename(path) if path =~ /\A.*\.a\z/
+			Find.find(library_bundle_path(dest, conf, sdk, arch)) do |path| 
+				libPaths.push(path) if path =~ /\A.*\.a\z/
+			end
 		end
-		libFilePath = "#{dest}/universal-#{conf}/#{libFileName}"
 
-		build_framework_library(
-			libFilePath, 
-			"#{library_bundle_path(dest, conf, sdk, arch)}/#{libFileName}",
-			"#{library_bundle_path(dest, conf, sdk, :i386)}/#{libFileName}"
-		)
-		create_framework(name, version, identifier, dest, headers, libFilePath)
+		ulibPath = "#{ulibDir}/#{File.basename(libPaths.first)}"
+		build_framework_library(ulibPath, libPaths)
+		create_framework(name, version, identifier, dest, headers, ulibPath)
 	end
 
 	def create_framework(name, version, identifier, dest, headers, lib)
@@ -154,8 +161,8 @@ module Builder
 	end
 
 	def library_bundle_path(path, conf, sdk, arch)
-		sdk, arch = compute_platform(sdk, arch)
-		"#{path}/#{sdk}-#{arch}-#{conf}"
+		psdk, parch = compute_platform(sdk, arch)
+		"#{path}/#{psdk}-#{parch}-#{conf}"
 	end
 
 	def framework_bundle_path(path, name)
@@ -163,8 +170,11 @@ module Builder
 	end
 
 	def compute_platform(sdk, arch)
-		return [sdk, arch] if arch.class == String
-		[arch == :i386 ? "iphonesimulator" + sdk : "iphoneos" + sdk, arch.to_s]
+		case arch
+			when String;         [sdk, arch]
+			when :i386, :x86_64; ["iphonesimulator" + sdk, arch.to_s]
+			else                 ["iphoneos" + sdk, arch.to_s]
+		end
 	end
 
 	private :library_bundle_path, :framework_bundle_path, :compute_platform 
@@ -174,10 +184,10 @@ end
 class Package
 	extend Builder
 
-	def self.build(conf, sdk, arch)
+	def self.build(conf, sdk, archs)
 		download
 		unpack
-		build_phase(config(conf), sdk, arch)
+		build_phase(config(conf), sdk, archs)
 	end
 
 	def self.unpack
@@ -200,7 +210,7 @@ class SDL2 < Package
 		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL" "#{SourcesDir}"}
 	end
 	
-	def self.build_phase(conf, sdk, arch)
+	def self.build_phase(conf, sdk, archs)
 		message "building SDL"
 		self.build_framework(
 			"SDL2",
@@ -212,7 +222,7 @@ class SDL2 < Package
 			"libSDL",
 			conf,
 			sdk,
-			arch
+			archs
 		)
 	end
 end
@@ -228,7 +238,7 @@ class SDL2_image < Package
 		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_image" "#{SourcesDir}"}
 	end
 	
-	def self.build_phase(conf, sdk, arch)
+	def self.build_phase(conf, sdk, archs)
 		message "building SDL_image"
 		self.build_framework(
 			"SDL2_image",
@@ -240,7 +250,7 @@ class SDL2_image < Package
 			"libSDL_image",
 			conf,
 			sdk,
-			arch
+			archs
 		)
 	end
 end
@@ -256,7 +266,7 @@ class SDL2_ttf < Package
 		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_ttf" "#{SourcesDir}"}
 	end
 
-	def self.build_phase(conf, sdk, arch)
+	def self.build_phase(conf, sdk, archs)
 		message "building SDL_ttf"
 		self.build_framework(
 			"SDL2_ttf",
@@ -268,7 +278,7 @@ class SDL2_ttf < Package
 			"Static Library",
 			conf,
 			sdk,
-			arch
+			archs
 		)
 	end
 end
@@ -284,7 +294,7 @@ class SDL2_mixer < Package
 		system %{hg clone -u release-#{Version} "http://hg.libsdl.org/SDL_mixer" "#{SourcesDir}"}
 	end
 	
-	def self.build_phase(conf, sdk, arch)
+	def self.build_phase(conf, sdk, archs)
 		message "patching SDL_mixer"
 		system %{sed -e 's/#include <endian.h>/#include <machine\\/endian.h>/' -i.back "#{SourcesDir}/external/libvorbisidec-1.2.1/misc.h"}
 
@@ -299,7 +309,7 @@ class SDL2_mixer < Package
 			"Static Library",
 			conf,
 			sdk,
-			arch
+			archs
 		)
 	end
 end
@@ -315,7 +325,7 @@ class Tremor < Package
 		system %{git clone "https://github.com/cocos2d/cocos2d-iphone.git" "#{SourcesDir}"}
 	end
 	
-	def self.build_phase(conf, sdk, arch)
+	def self.build_phase(conf, sdk, archs)
 		message "switching to v1.x brunch"
 		Dir.chdir(SourcesDir) do
 			system 'git checkout release-1.1'
@@ -332,7 +342,7 @@ class Tremor < Package
 			"vorbis",
 			conf,
 			sdk,
-			arch
+			archs
 		)
 	end
 end
@@ -344,13 +354,13 @@ SDLL = [:SDL2, :SDL2_image, :SDL2_mixer, :SDL2_ttf]
 AllL = SDLL + [:Tremor]
 
 desc "Download and build the SDL framework"
-task :default => ["SDL:build"] do
+task :default => ["SDL2:build"] do
 end
 
 desc "Download and build all SDL specific frameworks: [#{SDLL.join ", "}]"
 task :build_all do
 	SDLL.each do |classname|
-		Object.const_get(classname).build Configure::Conf, Configure::SDK, Configure::Arch
+		Object.const_get(classname).build Configure::Conf, Configure::SDK, Configure::Archs
 	end
 end
 
@@ -360,7 +370,7 @@ AllL.each do |classname|
 
 		desc "#{classname}: download and build framework"
 		task :build do
-			obj.build Configure::Conf, Configure::SDK, Configure::Arch
+			obj.build Configure::Conf, Configure::SDK, Configure::Archs
 		end
 
 		desc "#{classname}: download"
@@ -371,7 +381,7 @@ AllL.each do |classname|
 
 		desc "#{classname}: build framework"
 		task :build_phase do
-			obj.build_phase Configure::Conf, Configure::SDK, Configure::Arch
+			obj.build_phase Configure::Conf, Configure::SDK, Configure::Archs
 		end
 
 		desc "#{classname}: remove any generated file"
