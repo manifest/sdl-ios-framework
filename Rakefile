@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Builds a SDL framework for the iOS
-# Copyright (c) 2011-2014 Andrei Nesterov
+# Copyright (c) 2011-2016 Andrei Nesterov
 # See LICENSE for licensing information
 # ------------------------------------------------------------------------------
 #
