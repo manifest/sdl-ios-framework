@@ -193,7 +193,7 @@ class SDL2 < Package
 	ProjFile = "SDL.xcodeproj"
 	SourcesDir = "#{Global::SourcesDir}/SDL"
 	BuildDir = "#{Global::BuildDir}/sdl"
-	Version = "2.0.2"
+	Version = "2.0.4"
 
 	def self.download
 		message "downloading SDL"
@@ -221,7 +221,7 @@ end
 class SDL2_image < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_image"
 	BuildDir = "#{Global::BuildDir}/sdl_image"
-	Version = "2.0.0"
+	Version = "2.0.1"
  
 	def self.download
 		message "downloading SDL_image"
@@ -249,7 +249,7 @@ end
 class SDL2_ttf < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_ttf"
 	BuildDir = "#{Global::BuildDir}/sdl_ttf"
-	Version = "2.0.12"
+	Version = "2.0.13"
 
 	def self.download
 		message "downloading SDL_ttf"
@@ -277,7 +277,7 @@ end
 class SDL2_mixer < Package
 	SourcesDir = "#{Global::SourcesDir}/sdl_mixer"
 	BuildDir = "#{Global::BuildDir}/sdl_mixer"
-	Version = "2.0.0"
+	Version = "2.0.1"
 
 	def self.download
 		message "downloading SDL_mixer"
